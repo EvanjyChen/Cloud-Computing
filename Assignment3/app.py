@@ -2,23 +2,26 @@
 import aws_cdk as cdk
 
 from stacks.storage_stack import StorageStack
-from stacks.lambda_stack import LambdaStack
 from stacks.api_stack import ApiStack
+from stacks.driver_stack import DriverStack
 
 app = cdk.App()
 
 storage = StorageStack(app, "A3-StorageStack")
 
-lambdas = LambdaStack(
+api = ApiStack(
     app,
-    "A3-LambdaStack",
+    "A3-ApiStack",
     bucket=storage.bucket,
     table=storage.table,
     index_name=storage.index_name,
 )
 
-api = ApiStack(app, "A3-ApiStack", plotting_fn=lambdas.plotting_fn)
-
-lambdas.driver_fn.add_environment("API_URL", api.api_url)
+DriverStack(
+    app,
+    "A3-DriverStack",
+    bucket=storage.bucket,
+    api_url=api.api_url,
+)
 
 app.synth()
