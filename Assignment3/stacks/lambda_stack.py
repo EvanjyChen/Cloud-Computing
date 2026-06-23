@@ -9,7 +9,7 @@ from constructs import Construct
 
 
 class LambdaStack(Stack):
-    """Three lambdas: size-tracking, plotting, driver."""
+    """Plotting lambda + driver lambda (size-tracking lives in StorageStack)."""
 
     def __init__(
         self,
@@ -18,6 +18,7 @@ class LambdaStack(Stack):
         *,
         bucket: s3.Bucket,
         table: ddb.Table,
+        index_name: str,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -27,20 +28,6 @@ class LambdaStack(Stack):
             "TABLE_NAME": table.table_name,
         }
 
-        self.size_tracking_fn = _lambda.Function(
-            self,
-            "SizeTrackingFn",
-            runtime=_lambda.Runtime.PYTHON_3_11,
-            handler="index.lambda_handler",
-            code=_lambda.Code.from_asset("lambdas/size_tracking"),
-            timeout=Duration.seconds(30),
-            environment=common_env,
-        )
-        bucket.grant_read(self.size_tracking_fn)
-        table.grant_write_data(self.size_tracking_fn)
-
-        # plotting needs matplotlib — use the public AWSSDKPandas layer
-        # which ships numpy/pandas/matplotlib for python3.11
         matplotlib_layer = _lambda.LayerVersion.from_layer_version_arn(
             self,
             "AWSSDKPandasLayer",
@@ -55,10 +42,7 @@ class LambdaStack(Stack):
             code=_lambda.Code.from_asset("lambdas/plotting"),
             timeout=Duration.seconds(30),
             memory_size=512,
-            environment={
-                **common_env,
-                "INDEX_NAME": "bucket-timestamp-index",
-            },
+            environment={**common_env, "INDEX_NAME": index_name},
             layers=[matplotlib_layer],
         )
         table.grant_read_data(self.plotting_fn)
@@ -71,6 +55,6 @@ class LambdaStack(Stack):
             handler="index.lambda_handler",
             code=_lambda.Code.from_asset("lambdas/driver"),
             timeout=Duration.seconds(60),
-            environment=common_env,  # API_URL added later in app.py
+            environment=common_env,  # API_URL injected later in app.py
         )
         bucket.grant_read_write(self.driver_fn)
