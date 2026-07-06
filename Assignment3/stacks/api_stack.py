@@ -25,10 +25,15 @@ class ApiStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        matplotlib_layer = _lambda.LayerVersion.from_layer_version_arn(
+        matplotlib_layer = _lambda.LayerVersion(
             self,
-            "AWSSDKPandasLayer",
-            f"arn:aws:lambda:{self.region}:336392948345:layer:AWSSDKPandas-Python311:13",
+            "MatplotlibLayer",
+            code=_lambda.Code.from_asset(
+                "layers/matplotlib-python311-x86_64.zip"
+            ),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+            compatible_architectures=[_lambda.Architecture.X86_64],
+            description="Matplotlib 3.10.9 for Python 3.11",
         )
 
         self.plotting_fn = _lambda.Function(
@@ -43,6 +48,7 @@ class ApiStack(Stack):
                 "BUCKET_NAME": bucket.bucket_name,
                 "TABLE_NAME": table.table_name,
                 "INDEX_NAME": index_name,
+                "MPLCONFIGDIR": "/tmp/matplotlib",
             },
             layers=[matplotlib_layer],
         )
