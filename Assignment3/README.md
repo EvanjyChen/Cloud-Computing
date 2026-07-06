@@ -3,10 +3,8 @@
 CDK Python project that deploys the three lambdas, the S3 bucket, the DynamoDB
 table (with GSI), the S3 → size-tracking event wiring, and the REST API.
 
-The plotting function uses the bundled
-`layers/matplotlib-python311-x86_64.zip` Lambda layer. It contains Linux
-x86-64 wheels for Python 3.11, so no dependency build or region-specific
-third-party layer ARN is required during deployment.
+The plotting function renders its PNG with the Python standard library. No
+large binary package or region-specific third-party Lambda layer is required.
 
 ## Stacks
 - `A3-StorageStack` — S3 bucket, DynamoDB table (+ GSI), size-tracking
